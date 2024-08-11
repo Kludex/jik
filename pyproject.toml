@@ -11,13 +11,12 @@ python = "^3.8"
 
 [tool.poetry-dynamic-versioning]
 enable = true
-bump = true
 latest-tag = true
 format-jinja = """
 {%- if distance == 0 -%}
-    {{ base }}
+    {{ serialize_pep440(base, stage, revision) }}
 {%- else -%}
-    {{ base }}.dev{{ distance }}+{{ commit }}
+    {{ serialize_pep440(bump_version(base), stage="a", revision=distance) }}
 {%- endif -%}
 """
 
