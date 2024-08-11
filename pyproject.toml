@@ -1,9 +1,10 @@
 [tool.poetry]
 name = "jik"
-version = "0.0.0"
 description = "Coming soon..."
 authors = ["Marcelo Trylesinski <marcelotryle@gmail.com>"]
 readme = "README.md"
+# This will be replaced later during substitution.
+version = "0.0.0"
 
 [tool.poetry.dependencies]
 python = "^3.8"
@@ -11,12 +12,21 @@ python = "^3.8"
 [tool.poetry-dynamic-versioning]
 enable = true
 bump = true
+latest-tag = true
 format-jinja = """
 {%- if distance == 0 -%}
     {{ base }}
 {%- else -%}
     {{ base }}.dev{{ distance }}+{{ commit }}
 {%- endif -%}
+"""
+
+[tool.poetry-dynamic-versioning.files."jik/_version.py"]
+persistent-substitution = true
+initial-content = """
+  # These version placeholders will be replaced later during substitution.
+  __version__ = "0.0.0"
+  __version_tuple__ = (0, 0, 0)
 """
 
 [build-system]
