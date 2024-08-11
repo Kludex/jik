@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "jik"
+version = "0.0.0"
+description = "Coming soon..."
+authors = ["Marcelo Trylesinski <marcelotryle@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+
+[tool.poetry-dynamic-versioning]
+enable = true
+bump = true
+format-jinja = """
+{%- if distance == 0 -%}
+    {{ base }}
+{%- else -%}
+    {{ base }}.dev{{ distance }}+{{ commit }}
+{%- endif -%}
+"""
+
+[build-system]
+requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
+build-backend = "poetry_dynamic_versioning.backend"
