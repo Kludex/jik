@@ -31,9 +31,9 @@ jobs:
 
     - name: Build the package
       run: |
-        poetry build --output $(pwd)/dist --directory $(pwd)/.
-        poetry build --output $(pwd)/dist --directory $(pwd)/src/jik-app
-        poetry build --output $(pwd)/dist --directory $(pwd)/src/jik-server
+        poetry build
+        (cd src/jik-app && poetry build --output ../../dist)
+        (cd src/jik-server && poetry build --output ../../dist)
 
     - name: Publish the GitHub artifact
       uses: actions/upload-artifact@v3
@@ -80,3 +80,5 @@ jobs:
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         repository-url: https://test.pypi.org/legacy/
+        verbose: true
+        skip-existing: true

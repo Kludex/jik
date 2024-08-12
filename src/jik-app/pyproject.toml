@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "jik-app"
 version = "0.0.0"
-description = ""
+description = "Coming soon..."
 authors = ["Marcelo Trylesinski <marcelotryle@gmail.com>"]
 readme = "README.md"
 
