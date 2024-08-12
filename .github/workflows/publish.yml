@@ -30,7 +30,10 @@ jobs:
         poetry-plugins: "poetry-dynamic-versioning"
 
     - name: Build the package
-      run: poetry build
+      run: |
+        poetry build --output $(pwd)/dist --directory $(pwd)/.
+        poetry build --output $(pwd)/dist --directory $(pwd)/src/jik-app
+        poetry build --output $(pwd)/dist --directory $(pwd)/src/jik-server
 
     - name: Publish the GitHub artifact
       uses: actions/upload-artifact@v3

@@ -1,23 +1,13 @@
 [tool.poetry]
-name = "jik"
+name = "jik-server"
 version = "0.0.0"
-description = "Coming soon..."
+description = ""
 authors = ["Marcelo Trylesinski <marcelotryle@gmail.com>"]
 readme = "README.md"
-packages = [
-    { include = "jik_app", from = "src/jik-app" },
-    { include = "jik_server", from = "src/jik-server" },
-]
 
 [tool.poetry.dependencies]
 python = "^3.8"
 uvloop = ">=0.19.0"
-
-[tool.poetry.dev-dependencies]
-pytest = "*"
-
-[tool.pytest.ini_options]
-addopts = ["--import-mode=importlib"]
 
 [tool.poetry-dynamic-versioning]
 enable = true
