@@ -53,6 +53,8 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: Automated merge from uvicorn
+          delete-branch: true
+          branch-suffix: random
           title: Sync Uvicorn changes
           body: |
             This PR contains updates from the `uvicorn` repository.
