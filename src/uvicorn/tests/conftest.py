@@ -39,6 +39,9 @@ from uvicorn.importer import import_from_string
 # See also: https://github.com/pytest-dev/pytest/issues/3697
 LOGGING_CONFIG["loggers"]["uvicorn"]["propagate"] = True
 
+# Run `import tests; tests.__file__`.
+breakpoint()
+
 
 @pytest.fixture
 def tls_certificate_authority() -> trustme.CA:
