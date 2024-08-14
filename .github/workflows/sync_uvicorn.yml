@@ -46,13 +46,20 @@ jobs:
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
 
       - name: Attempt to merge uvicorn changes
-        run: git merge -X theirs uvicorn/master --allow-unrelated-histories || echo "No changes to merge"
+        run: |
+          if ! git diff --quiet HEAD FETCH_HEAD; then
+              git merge -X theirs uvicorn/master --allow-unrelated-histories
+          else
+              echo "No changes to merge."
+          fi
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: Automated merge from uvicorn
+          delete-branch: true
+          branch-suffix: random
           title: Sync Uvicorn changes
           body: |
             This PR contains updates from the `uvicorn` repository.
