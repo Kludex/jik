@@ -1,0 +1,60 @@
+name: Sync Uvicorn
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout jik repository
+        uses: actions/checkout@v3
+        with:
+          ref: main
+
+      - name: Install Git Filter-Repo
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git
+          curl -LJO https://raw.githubusercontent.com/newren/git-filter-repo/main/git-filter-repo
+          sudo mv git-filter-repo /usr/local/bin/git-filter-repo
+          sudo chmod +x /usr/local/bin/git-filter-repo
+
+      - name: Clone uvicorn repository
+        run: git clone https://github.com/encode/uvicorn.git
+
+      - name: Filter uvicorn to src/uvicorn directory
+        run: |
+          cd uvicorn
+          git filter-repo --to-subdirectory-filter src/uvicorn
+          cd ..
+
+      - name: Add uvicorn as a remote to jik
+        run: git remote add uvicorn ./uvicorn
+
+      - name: Fetch uvicorn
+        run: |
+          git fetch uvicorn
+          rm -rf uvicorn
+
+      - name: Set up Git user
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Attempt to merge uvicorn changes
+        run: git merge -X theirs uvicorn/master --allow-unrelated-histories || echo "No changes to merge"
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: Automated merge from uvicorn
+          title: Sync Uvicorn changes
+          body: |
+            This PR contains updates from the `uvicorn` repository.
+            Please review and merge.
+          labels: 'auto-sync, needs-review'
