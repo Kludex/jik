@@ -7,6 +7,7 @@ readme = "README.md"
 packages = [
     { include = "jik_app", from = "src/jik-app" },
     { include = "jik_server", from = "src/jik-server" },
+    { include = "uvicorn", from = "src/uvicorn" },
 ]
 
 [tool.poetry.dependencies]
@@ -15,9 +16,20 @@ uvloop = ">=0.19.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
+# Uvicorn related
+click = "*"
+httpx = "*"
+websockets = "*"
+wsproto = "*"
+httptools = "*"
+pyyaml = "*"
+a2wsgi = "*"
+pytest-mock = "*"
+python-dotenv = "*"
 
 [tool.pytest.ini_options]
 addopts = ["--import-mode=importlib"]
+testpaths = ["src/jik-app/tests", "src/jik-server/tests", "src/uvicorn/tests"]
 
 [tool.poetry-dynamic-versioning]
 enable = true
