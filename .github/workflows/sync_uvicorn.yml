@@ -56,15 +56,24 @@ jobs:
 
       - name: Attempt to merge ${{ matrix.package }} changes
         id: merge
-        run: git merge -X theirs ${{ matrix.package }}/${{ matrix.branch }} --allow-unrelated-histories --no-commit
+        run: |
+          git merge -X theirs ${{ matrix.package }}/${{ matrix.branch }} --allow-unrelated-histories
+
+          if [ $(git diff --name-only origin/main | wc -l) -eq 0 ]; then
+            echo "No changes to merge"
+            echo "should_merge=false" >> $GITHUB_OUTPUT
+          else
+            echo "Successfully merged changes"
+            echo "should_merge=true" >> $GITHUB_OUTPUT
+          fi
 
       - name: Create Pull Request
+        if: ${{ steps.merge.outputs.should_merge == 'true' }}
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: Automated merge from ${{ matrix.package }}
           delete-branch: true
-          branch-suffix: random
           title: Sync ${{ matrix.package }} changes
           body: |
             This PR contains updates from the `${{ matrix.package }}` repository.
