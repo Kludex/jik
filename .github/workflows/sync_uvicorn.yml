@@ -1,4 +1,4 @@
-name: Sync Uvicorn
+name: Sync Repositories
 
 on:
   schedule:
@@ -8,10 +8,19 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - repository: encode/uvicorn
+            package: uvicorn
+            branch: master
+          - repository: encode/starlette
+            package: starlette
+            branch: master
 
     steps:
       - name: Checkout jik repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: main
 
@@ -23,49 +32,41 @@ jobs:
           sudo mv git-filter-repo /usr/local/bin/git-filter-repo
           sudo chmod +x /usr/local/bin/git-filter-repo
 
-      - name: Clone uvicorn repository
-        run: git clone https://github.com/encode/uvicorn.git
+      - name: Clone ${{ matrix.package }} repository
+        run: git clone https://github.com/${{ matrix.repository }}.git
 
-      - name: Filter uvicorn to src/uvicorn directory
+      - name: Filter ${{ matrix.package }} to src/${{ matrix.package }} directory
         run: |
-          cd uvicorn
-          git filter-repo --to-subdirectory-filter src/uvicorn
+          cd ${{ matrix.package }}
+          git filter-repo --to-subdirectory-filter src/${{ matrix.package }}
           cd ..
 
-      - name: Add uvicorn as a remote to jik
-        run: git remote add uvicorn ./uvicorn
+      - name: Add ${{ matrix.package }} as a remote to jik
+        run: git remote add ${{ matrix.package }} ./${{ matrix.package }}
 
-      - name: Fetch uvicorn
+      - name: Fetch ${{ matrix.package }}
         run: |
-          git fetch uvicorn
-          rm -rf uvicorn
+          git fetch ${{ matrix.package }}
+          rm -rf ${{ matrix.package }}
 
       - name: Set up Git user
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
 
-      - name: Attempt to merge uvicorn changes
+      - name: Attempt to merge ${{ matrix.package }} changes
         id: merge
-        run: |
-          output=$(git merge -X theirs uvicorn/master --allow-unrelated-histories 2>&1)
-
-          if [[ $output == *"Already up to date."* ]]; then
-            echo "up-to-date=true" >> $GITHUB_OUTPUT
-          else
-            echo "up-to-date=false" >> $GITHUB_OUTPUT
-          fi
+        run: git merge -X theirs ${{ matrix.package }}/${{ matrix.branch }} --allow-unrelated-histories --no-commit
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v5
-        if: steps.merge.outputs.up-to-date == false
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: Automated merge from uvicorn
+          commit-message: Automated merge from ${{ matrix.package }}
           delete-branch: true
           branch-suffix: random
-          title: Sync Uvicorn changes
+          title: Sync ${{ matrix.package }} changes
           body: |
-            This PR contains updates from the `uvicorn` repository.
+            This PR contains updates from the `${{ matrix.package }}` repository.
             Please review and merge.
           labels: 'auto-sync, needs-review'
