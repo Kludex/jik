@@ -46,15 +46,19 @@ jobs:
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
 
       - name: Attempt to merge uvicorn changes
+        id: merge
         run: |
-          if ! git diff --quiet HEAD FETCH_HEAD; then
-              git merge -X theirs uvicorn/master --allow-unrelated-histories
+          output=$(git merge -X theirs uvicorn/master --allow-unrelated-histories 2>&1)
+
+          if [[ $output == *"Already up to date."* ]]; then
+            echo "up-to-date=true" >> $GITHUB_OUTPUT
           else
-              echo "No changes to merge."
+            echo "up-to-date=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v5
+        if: steps.merge.outputs.up-to-date == false
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: Automated merge from uvicorn
