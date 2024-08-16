@@ -20,7 +20,7 @@ jobs:
 
     steps:
       - name: Checkout jik repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: main
 
@@ -57,9 +57,9 @@ jobs:
       - name: Attempt to merge ${{ matrix.package }} changes
         id: merge
         run: |
-          output=$(git merge -X theirs ${{ matrix.package }}/${{ matrix.branch }} --allow-unrelated-histories 2>&1)
+          output=$(git merge -X theirs ${{ matrix.package }}/${{ matrix.branch }} --allow-unrelated-histories --no-commit 2>&1)
 
-          if [[ $output == *"Already up to date."* ]]; then
+          if [[ $output == *"Merge made by the 'ort' strategy."* ]]; then
             echo "up-to-date=true" >> $GITHUB_OUTPUT
           else
             echo "up-to-date=false" >> $GITHUB_OUTPUT
@@ -67,7 +67,7 @@ jobs:
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v5
-        if: steps.merge.outputs.up-to-date == false
+        if: ${{ steps.merge.outputs.up-to-date == 'false' }}
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: Automated merge from ${{ matrix.package }}
