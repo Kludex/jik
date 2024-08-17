@@ -8,24 +8,30 @@ packages = [
     { include = "jik_app", from = "src/jik-app" },
     { include = "jik_server", from = "src/jik-server" },
     { include = "uvicorn", from = "src/uvicorn" },
+    { include = "starlette", from = "src/starlette" },
 ]
 
 [tool.poetry.dependencies]
 python = "^3.8"
-uvloop = ">=0.19.0"
+uvloop = { version = ">=0.19.0", markers = "sys_platform != 'win32'" }
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
+tox = "*"
+httpx = "*"
+pyyaml = "*"
 # Uvicorn related
 click = "*"
-httpx = "*"
 websockets = "*"
 wsproto = "*"
 httptools = "*"
-pyyaml = "*"
 a2wsgi = "*"
 pytest-mock = "*"
 python-dotenv = "*"
+# Starlette related
+itsdangerous = "*"
+jinja2 = "*"
+python-multipart = ">=0.0.7"
 
 [tool.pytest.ini_options]
 addopts = ["--import-mode=importlib"]
