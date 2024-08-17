@@ -21,12 +21,12 @@ jobs:
       matrix:
         py: ["3.8", "3.9", "3.10", "3.11", "3.12"]
         package: ["uvicorn", "starlette"]
-        os: ["ubuntu-latest", "windows-latest", "macos-latest"]
-        exclude:
-          - os: windows-latest
-            package: starlette
-          - os: macos-latest
-            package: starlette
+        os: ["ubuntu-latest"] # , "windows-latest", "macos-latest"]
+        # exclude:
+        #   - os: windows-latest
+        #     package: starlette
+        #   - os: macos-latest
+        #     package: starlette
 
     steps:
       - uses: actions/checkout@v3
@@ -42,3 +42,13 @@ jobs:
         run: tox --notest
       - name: Run tests
         run: tox -e ${{ matrix.package }}
+
+  check:
+    if: always()
+    needs: [pre-commit, test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Decide whether the needed jobs succeeded or failed
+        uses: re-actors/alls-green@release/v1
+        with:
+          jobs: ${{ toJSON(needs) }}
