@@ -2,6 +2,42 @@
 toc_depth: 2
 ---
 
+## 0.45.1 (December 30, 2024)
+
+#### Fixed
+
+* Close `MemoryObjectReceiveStream` left unclosed upon exception in `BaseHTTPMiddleware` children [#2813](https://github.com/encode/starlette/pull/2813).
+* Collect errors more reliably from the WebSocket logic on the `TestClient` [#2814](https://github.com/encode/starlette/pull/2814).
+
+#### Refactor
+
+* Use a pair of memory object streams instead of two queues on the `TestClient` [#2829](https://github.com/encode/starlette/pull/2829).
+
+## 0.45.0 (December 29, 2024)
+
+#### Removed
+
+* Drop Python 3.8 support [#2823](https://github.com/encode/starlette/pull/2823).
+* Remove `ExceptionMiddleware` import proxy from `starlette.exceptions` module [#2826](https://github.com/encode/starlette/pull/2826).
+* Remove deprecated `WS_1004_NO_STATUS_RCVD` and `WS_1005_ABNORMAL_CLOSURE` [#2827](https://github.com/encode/starlette/pull/2827).
+
+## 0.44.0 (December 28, 2024)
+
+#### Added
+
+* Add `client` parameter to `TestClient` [#2810](https://github.com/encode/starlette/pull/2810).
+* Add `max_part_size` parameter to `Request.form()` [#2815](https://github.com/encode/starlette/pull/2815).
+
+## 0.43.0 (December 25, 2024)
+
+#### Removed
+
+* Remove deprecated `allow_redirects` argument from `TestClient` [#2808](https://github.com/encode/starlette/pull/2808).
+
+#### Added
+
+* Make UUID path parameter conversion more flexible [#2806](https://github.com/encode/starlette/pull/2806).
+
 ## 0.42.0 (December 14, 2024)
 
 #### Added
