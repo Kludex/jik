@@ -3,8 +3,9 @@ from __future__ import annotations
 import contextlib
 import functools
 import json
-import typing
 import uuid
+from collections.abc import AsyncGenerator, AsyncIterator, Generator
+from typing import Callable, TypedDict
 
 import pytest
 
@@ -165,7 +166,7 @@ app = Router(
 @pytest.fixture
 def client(
     test_client_factory: TestClientFactory,
-) -> typing.Generator[TestClient, None, None]:
+) -> Generator[TestClient, None, None]:
     with test_client_factory(app) as client:
         yield client
 
@@ -565,6 +566,16 @@ def test_url_for_with_double_mount() -> None:
     assert url == "/mount/static/123"
 
 
+def test_url_for_with_root_path_ending_with_slash(test_client_factory: TestClientFactory) -> None:
+    def homepage(request: Request) -> JSONResponse:
+        return JSONResponse({"index": str(request.url_for("homepage"))})
+
+    app = Starlette(routes=[Route("/", homepage, name="homepage")])
+    client = test_client_factory(app, base_url="https://www.example.org/", root_path="/sub_path/")
+    response = client.get("/sub_path/")
+    assert response.json() == {"index": "https://www.example.org/sub_path/"}
+
+
 def test_standalone_route_matches(
     test_client_factory: TestClientFactory,
 ) -> None:
@@ -576,7 +587,7 @@ def test_standalone_route_matches(
 
 
 def test_standalone_route_does_not_match(
-    test_client_factory: typing.Callable[..., TestClient],
+    test_client_factory: Callable[..., TestClient],
 ) -> None:
     app = Route("/", PlainTextResponse("Hello, World!"))
     client = test_client_factory(app)
@@ -649,7 +660,7 @@ def test_lifespan_with_on_events(test_client_factory: TestClientFactory) -> None
     shutdown_called = False
 
     @contextlib.asynccontextmanager
-    async def lifespan(app: Starlette) -> typing.AsyncGenerator[None, None]:
+    async def lifespan(app: Starlette) -> AsyncGenerator[None, None]:
         nonlocal lifespan_called
         lifespan_called = True
         yield
@@ -721,7 +732,7 @@ def test_lifespan_state_unsupported(
     @contextlib.asynccontextmanager
     async def lifespan(
         app: ASGIApp,
-    ) -> typing.AsyncGenerator[dict[str, str], None]:
+    ) -> AsyncGenerator[dict[str, str], None]:
         yield {"foo": "bar"}
 
     app = Router(
@@ -742,7 +753,7 @@ def test_lifespan_state_async_cm(test_client_factory: TestClientFactory) -> None
     startup_complete = False
     shutdown_complete = False
 
-    class State(typing.TypedDict):
+    class State(TypedDict):
         count: int
         items: list[int]
 
@@ -757,7 +768,7 @@ def test_lifespan_state_async_cm(test_client_factory: TestClientFactory) -> None
         return PlainTextResponse("hello, world")
 
     @contextlib.asynccontextmanager
-    async def lifespan(app: Starlette) -> typing.AsyncIterator[State]:
+    async def lifespan(app: Starlette) -> AsyncIterator[State]:
         nonlocal startup_complete, shutdown_complete
         startup_complete = True
         state = State(count=0, items=[])
@@ -883,10 +894,10 @@ class Endpoint:
             id="staticmethod",
         ),
         pytest.param(Endpoint(), "Endpoint", id="object"),
-        pytest.param(lambda request: ..., "<lambda>", id="lambda"),
+        pytest.param(lambda request: ..., "<lambda>", id="lambda"),  # pragma: no branch
     ],
 )
-def test_route_name(endpoint: typing.Callable[..., Response], expected_name: str) -> None:
+def test_route_name(endpoint: Callable[..., Response], expected_name: str) -> None:
     assert Route(path="/", endpoint=endpoint).name == expected_name
 
 
@@ -995,7 +1006,7 @@ def test_mount_asgi_app_with_middleware_url_path_for() -> None:
 
 
 def test_add_route_to_app_after_mount(
-    test_client_factory: typing.Callable[..., TestClient],
+    test_client_factory: Callable[..., TestClient],
 ) -> None:
     """Checks that Mount will pick up routes
     added to the underlying app after it is mounted
@@ -1028,7 +1039,7 @@ def test_exception_on_mounted_apps(
 
 
 def test_mounted_middleware_does_not_catch_exception(
-    test_client_factory: typing.Callable[..., TestClient],
+    test_client_factory: Callable[..., TestClient],
 ) -> None:
     # https://github.com/encode/starlette/pull/1649#discussion_r960236107
     def exc(request: Request) -> Response:

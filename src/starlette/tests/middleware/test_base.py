@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import contextvars
+from collections.abc import AsyncGenerator, AsyncIterator, Generator
 from contextlib import AsyncExitStack
-from typing import Any, AsyncGenerator, AsyncIterator, Generator
+from pathlib import Path
+from typing import Any
 
 import anyio
 import pytest
@@ -13,7 +15,7 @@ from starlette.background import BackgroundTask
 from starlette.middleware import Middleware, _MiddlewareFactory
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import ClientDisconnect, Request
-from starlette.responses import PlainTextResponse, Response, StreamingResponse
+from starlette.responses import FileResponse, PlainTextResponse, Response, StreamingResponse
 from starlette.routing import Route, WebSocketRoute
 from starlette.testclient import TestClient
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
@@ -288,12 +290,56 @@ async def test_run_background_tasks_even_if_client_disconnects() -> None:
 
     async def send(message: Message) -> None:
         if message["type"] == "http.response.body":
-            if not message.get("more_body", False):
+            if not message.get("more_body", False):  # pragma: no branch
                 response_complete.set()
 
     await app(scope, receive, send)
 
     assert background_task_run.is_set()
+
+
+def test_run_background_tasks_raise_exceptions(test_client_factory: TestClientFactory) -> None:
+    # test for https://github.com/encode/starlette/issues/2625
+
+    async def sleep_and_set() -> None:
+        await anyio.sleep(0.1)
+        raise ValueError("TEST")
+
+    async def endpoint_with_background_task(_: Request) -> PlainTextResponse:
+        return PlainTextResponse(background=BackgroundTask(sleep_and_set))
+
+    async def passthrough(request: Request, call_next: RequestResponseEndpoint) -> Response:
+        return await call_next(request)
+
+    app = Starlette(
+        middleware=[Middleware(BaseHTTPMiddleware, dispatch=passthrough)],
+        routes=[Route("/", endpoint_with_background_task)],
+    )
+
+    client = test_client_factory(app)
+    with pytest.raises(ValueError, match="TEST"):
+        client.get("/")
+
+
+def test_exception_can_be_caught(test_client_factory: TestClientFactory) -> None:
+    async def error_endpoint(_: Request) -> None:
+        raise ValueError("TEST")
+
+    async def catches_error(request: Request, call_next: RequestResponseEndpoint) -> Response:
+        try:
+            return await call_next(request)
+        except ValueError as exc:
+            return PlainTextResponse(content=str(exc), status_code=400)
+
+    app = Starlette(
+        middleware=[Middleware(BaseHTTPMiddleware, dispatch=catches_error)],
+        routes=[Route("/", error_endpoint)],
+    )
+
+    client = test_client_factory(app)
+    response = client.get("/")
+    assert response.status_code == 400
+    assert response.text == "TEST"
 
 
 @pytest.mark.anyio
@@ -402,7 +448,7 @@ async def test_run_context_manager_exit_even_if_client_disconnects() -> None:
 
     async def send(message: Message) -> None:
         if message["type"] == "http.response.body":
-            if not message.get("more_body", False):
+            if not message.get("more_body", False):  # pragma: no branch
                 response_complete.set()
 
     await app(scope, receive, send)
@@ -456,7 +502,7 @@ def test_app_receives_http_disconnect_while_sending_if_discarded(
                 task_status.started()
                 while True:
                     message = await receive()
-                    if message["type"] == "http.disconnect":
+                    if message["type"] == "http.disconnect":  # pragma: no branch
                         task_group.cancel_scope.cancel()
                         break
 
@@ -717,7 +763,7 @@ def test_read_request_stream_in_dispatch_after_app_calls_body(
 async def test_read_request_stream_in_dispatch_wrapping_app_calls_body() -> None:
     async def endpoint(scope: Scope, receive: Receive, send: Send) -> None:
         request = Request(scope, receive)
-        async for chunk in request.stream():
+        async for chunk in request.stream():  # pragma: no branch
             assert chunk == b"2"
             break
         await Response()(scope, receive, send)
@@ -730,7 +776,7 @@ async def test_read_request_stream_in_dispatch_wrapping_app_calls_body() -> None
         ) -> Response:
             expected = b"1"
             response: Response | None = None
-            async for chunk in request.stream():
+            async for chunk in request.stream():  # pragma: no branch
                 assert chunk == expected
                 if expected == b"1":
                     response = await call_next(request)
@@ -943,7 +989,7 @@ def test_downstream_middleware_modifies_receive(
         async def wrapped_app(scope: Scope, receive: Receive, send: Send) -> None:
             async def wrapped_receive() -> Message:
                 msg = await receive()
-                if msg["type"] == "http.request":
+                if msg["type"] == "http.request":  # pragma: no branch
                     msg["body"] = msg["body"] * 2
                 return msg
 
@@ -1153,3 +1199,47 @@ async def test_poll_for_disconnect_repeated(send_body: bool) -> None:
         {"type": "http.response.body", "body": b"good!", "more_body": True},
         {"type": "http.response.body", "body": b"", "more_body": False},
     ]
+
+
+@pytest.mark.anyio
+async def test_asgi_pathsend_events(tmpdir: Path) -> None:
+    path = tmpdir / "example.txt"
+    with path.open("w") as file:
+        file.write("<file content>")
+
+    response_complete = anyio.Event()
+    events: list[Message] = []
+
+    async def endpoint_with_pathsend(_: Request) -> FileResponse:
+        return FileResponse(path)
+
+    async def passthrough(request: Request, call_next: RequestResponseEndpoint) -> Response:
+        return await call_next(request)
+
+    app = Starlette(
+        middleware=[Middleware(BaseHTTPMiddleware, dispatch=passthrough)],
+        routes=[Route("/", endpoint_with_pathsend)],
+    )
+
+    scope = {
+        "type": "http",
+        "version": "3",
+        "method": "GET",
+        "path": "/",
+        "headers": [],
+        "extensions": {"http.response.pathsend": {}},
+    }
+
+    async def receive() -> Message:
+        raise NotImplementedError("Should not be called!")  # pragma: no cover
+
+    async def send(message: Message) -> None:
+        events.append(message)
+        if message["type"] == "http.response.pathsend":
+            response_complete.set()
+
+    await app(scope, receive, send)
+
+    assert len(events) == 2
+    assert events[0]["type"] == "http.response.start"
+    assert events[1]["type"] == "http.response.pathsend"
