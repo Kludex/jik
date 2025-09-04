@@ -2,6 +2,124 @@
 toc_depth: 2
 ---
 
+## 0.47.3 (August 24, 2025)
+
+#### Fixed
+
+* Use `asyncio.iscoroutinefunction` for Python 3.12 and older [#2984](https://github.com/encode/starlette/pull/2984).
+
+## 0.47.2 (July 20, 2025)
+
+#### Fixed
+
+* Make `UploadFile` check for future rollover [#2962](https://github.com/encode/starlette/pull/2962).
+
+## 0.47.1 (June 21, 2025)
+
+#### Fixed
+
+* Use `Self` in `TestClient.__enter__` [#2951](https://github.com/encode/starlette/pull/2951).
+* Allow async exception handlers to type-check [#2949](https://github.com/encode/starlette/pull/2949).
+
+## 0.47.0 (May 29, 2025)
+
+#### Added
+
+* Add support for ASGI `pathsend` extension [#2671](https://github.com/encode/starlette/pull/2671).
+* Add `partitioned` attribute to `Response.set_cookie` [#2501](https://github.com/encode/starlette/pull/2501).
+
+#### Changed
+
+* Change `methods` parameter type from `list[str]` to `Collection[str]`
+  [#2903](https://github.com/encode/starlette/pull/2903).
+* Replace `import typing` by `from typing import ...` in the whole codebase
+  [#2867](https://github.com/encode/starlette/pull/2867).
+
+#### Fixed
+
+* Mark `ExceptionMiddleware.http_exception` as async to prevent thread creation
+  [#2922](https://github.com/encode/starlette/pull/2922).
+
+## 0.46.2 (April 13, 2025)
+
+#### Fixed
+
+* Prevents reraising of exception from BaseHttpMiddleware [#2911](https://github.com/encode/starlette/pull/2911).
+* Use correct index on backwards compatible logic in `TemplateResponse` [#2909](https://github.com/encode/starlette/pull/2909).
+
+## 0.46.1 (March 8, 2025)
+
+#### Fixed
+
+* Allow relative directory path when `follow_symlinks=True` [#2896](https://github.com/encode/starlette/pull/2896).
+
+## 0.46.0 (February 22, 2025)
+
+#### Added
+
+* `GZipMiddleware`: Make sure `Vary` header is always added if a response can be compressed [#2865](https://github.com/encode/starlette/pull/2865).
+
+#### Fixed
+
+* Raise exception from background task on BaseHTTPMiddleware [#2812](https://github.com/encode/starlette/pull/2812).
+* `GZipMiddleware`: Don't compress on server sent events [#2871](https://github.com/encode/starlette/pull/2871).
+
+#### Changed
+
+* `MultiPartParser`: Rename `max_file_size` to `spool_max_size` [#2780](https://github.com/encode/starlette/pull/2780).
+
+#### Deprecated
+
+* Add deprecated warning to `TestClient(timeout=...)` [#2840](https://github.com/encode/starlette/pull/2840).
+
+## 0.45.3 (January 24, 2025)
+
+#### Fixed
+
+* Turn directory into string on `lookup_path` on commonpath comparison [#2851](https://github.com/encode/starlette/pull/2851).
+
+## 0.45.2 (January 4, 2025)
+
+#### Fixed
+
+* Make `create_memory_object_stream` compatible with old anyio versions once again, and bump anyio minimum version to 3.6.2 [#2833](https://github.com/encode/starlette/pull/2833).
+
+## 0.45.1 (December 30, 2024)
+
+#### Fixed
+
+* Close `MemoryObjectReceiveStream` left unclosed upon exception in `BaseHTTPMiddleware` children [#2813](https://github.com/encode/starlette/pull/2813).
+* Collect errors more reliably from the WebSocket logic on the `TestClient` [#2814](https://github.com/encode/starlette/pull/2814).
+
+#### Refactor
+
+* Use a pair of memory object streams instead of two queues on the `TestClient` [#2829](https://github.com/encode/starlette/pull/2829).
+
+## 0.45.0 (December 29, 2024)
+
+#### Removed
+
+* Drop Python 3.8 support [#2823](https://github.com/encode/starlette/pull/2823).
+* Remove `ExceptionMiddleware` import proxy from `starlette.exceptions` module [#2826](https://github.com/encode/starlette/pull/2826).
+* Remove deprecated `WS_1004_NO_STATUS_RCVD` and `WS_1005_ABNORMAL_CLOSURE` [#2827](https://github.com/encode/starlette/pull/2827).
+
+## 0.44.0 (December 28, 2024)
+
+#### Added
+
+* Add `client` parameter to `TestClient` [#2810](https://github.com/encode/starlette/pull/2810).
+* Add `max_part_size` parameter to `Request.form()` [#2815](https://github.com/encode/starlette/pull/2815).
+
+## 0.43.0 (December 25, 2024)
+
+#### Removed
+
+* Remove deprecated `allow_redirects` argument from `TestClient` [#2808](https://github.com/encode/starlette/pull/2808).
+
+#### Added
+
+* Make UUID path parameter conversion more flexible [#2806](https://github.com/encode/starlette/pull/2806).
+
 ## 0.42.0 (December 14, 2024)
 
 #### Added

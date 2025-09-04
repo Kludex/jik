@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import datetime as dt
+import sys
 import time
+from collections.abc import AsyncGenerator, AsyncIterator, Iterator
 from http.cookies import SimpleCookie
 from pathlib import Path
-from typing import Any, AsyncGenerator, AsyncIterator, Iterator
+from typing import Any
 
 import anyio
 import pytest
@@ -89,7 +91,7 @@ def test_redirect_response_content_length_header(
         await response(scope, receive, send)
 
     client: TestClient = test_client_factory(app)
-    response = client.request("GET", "/redirect", allow_redirects=False)
+    response = client.request("GET", "/redirect", follow_redirects=False)
     assert response.url == "http://testserver/redirect"
     assert response.headers["content-length"] == "0"
 
@@ -352,6 +354,38 @@ def test_file_response_with_range_header(tmp_path: Path, test_client_factory: Te
     assert response.headers["content-range"] == f"bytes 0-4/{len(content)}"
 
 
+@pytest.mark.anyio
+async def test_file_response_with_pathsend(tmpdir: Path) -> None:
+    path = tmpdir / "xyz"
+    content = b"<file content>" * 1000
+    with open(path, "wb") as file:
+        file.write(content)
+
+    app = FileResponse(path=path, filename="example.png")
+
+    async def receive() -> Message:  # type: ignore[empty-body]
+        ...  # pragma: no cover
+
+    async def send(message: Message) -> None:
+        if message["type"] == "http.response.start":
+            assert message["status"] == status.HTTP_200_OK
+            headers = Headers(raw=message["headers"])
+            assert headers["content-type"] == "image/png"
+            assert "content-length" in headers
+            assert "content-disposition" in headers
+            assert "last-modified" in headers
+            assert "etag" in headers
+        elif message["type"] == "http.response.pathsend":  # pragma: no branch
+            assert message["path"] == str(path)
+
+    # Since the TestClient doesn't support `pathsend`, we need to test this directly.
+    await app(
+        {"type": "http", "method": "get", "headers": [], "extensions": {"http.response.pathsend": {}}},
+        receive,
+        send,
+    )
+
+
 def test_set_cookie(test_client_factory: TestClientFactory, monkeypatch: pytest.MonkeyPatch) -> None:
     # Mock time used as a reference for `Expires` by stdlib `SimpleCookie`.
     mocked_now = dt.datetime(2037, 1, 22, 12, 0, 0, tzinfo=dt.timezone.utc)
@@ -369,16 +403,35 @@ def test_set_cookie(test_client_factory: TestClientFactory, monkeypatch: pytest.
             secure=True,
             httponly=True,
             samesite="none",
+            partitioned=True if sys.version_info >= (3, 14) else False,
         )
         await response(scope, receive, send)
+
+    partitioned_text = "Partitioned; " if sys.version_info >= (3, 14) else ""
 
     client = test_client_factory(app)
     response = client.get("/")
     assert response.text == "Hello, world!"
     assert (
         response.headers["set-cookie"] == "mycookie=myvalue; Domain=localhost; expires=Thu, 22 Jan 2037 12:00:10 GMT; "
-        "HttpOnly; Max-Age=10; Path=/; SameSite=none; Secure"
+        f"HttpOnly; Max-Age=10; {partitioned_text}Path=/; SameSite=none; Secure"
     )
+
+
+@pytest.mark.skipif(sys.version_info >= (3, 14), reason="Only relevant for <3.14")
+def test_set_cookie_raises_for_invalid_python_version(
+    test_client_factory: TestClientFactory,
+) -> None:  # pragma: no cover
+    async def app(scope: Scope, receive: Receive, send: Send) -> None:
+        response = Response("Hello, world!", media_type="text/plain")
+        with pytest.raises(ValueError):
+            response.set_cookie("mycookie", "myvalue", partitioned=True)
+        await response(scope, receive, send)
+
+    client = test_client_factory(app)
+    response = client.get("/")
+    assert response.text == "Hello, world!"
+    assert response.headers.get("set-cookie") is None
 
 
 def test_set_cookie_path_none(test_client_factory: TestClientFactory) -> None:
@@ -391,6 +444,18 @@ def test_set_cookie_path_none(test_client_factory: TestClientFactory) -> None:
     response = client.get("/")
     assert response.text == "Hello, world!"
     assert response.headers["set-cookie"] == "mycookie=myvalue; SameSite=lax"
+
+
+def test_set_cookie_samesite_none(test_client_factory: TestClientFactory) -> None:
+    async def app(scope: Scope, receive: Receive, send: Send) -> None:
+        response = Response("Hello, world!", media_type="text/plain")
+        response.set_cookie("mycookie", "myvalue", samesite=None)
+        await response(scope, receive, send)
+
+    client = test_client_factory(app)
+    response = client.get("/")
+    assert response.text == "Hello, world!"
+    assert response.headers["set-cookie"] == "mycookie=myvalue; Path=/"
 
 
 @pytest.mark.parametrize(
@@ -674,12 +739,12 @@ def test_file_response_range_invalid(file_response_client: TestClient) -> None:
 
 
 def test_file_response_range_head_max(file_response_client: TestClient) -> None:
-    response = file_response_client.head("/", headers={"Range": f"bytes=0-{len(README.encode('utf8'))+1}"})
+    response = file_response_client.head("/", headers={"Range": f"bytes=0-{len(README.encode('utf8')) + 1}"})
     assert response.status_code == 206
 
 
 def test_file_response_range_416(file_response_client: TestClient) -> None:
-    response = file_response_client.head("/", headers={"Range": f"bytes={len(README.encode('utf8'))+1}-"})
+    response = file_response_client.head("/", headers={"Range": f"bytes={len(README.encode('utf8')) + 1}-"})
     assert response.status_code == 416
     assert response.headers["Content-Range"] == f"*/{len(README.encode('utf8'))}"
 
